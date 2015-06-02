@@ -144,7 +144,7 @@ exports.handler = function(event, context) {
     var def = Q.defer();
 
     var gifsToConvert = rawKeys.filter(function(key) {
-      if (!contains(mp4Keys, stripToBase(key)) || event.forceConvert) {
+      if (!contains(mp4Keys, stripToBase(key)) || event.forceReconvert) {
         return key;
       } else {
         return false;
