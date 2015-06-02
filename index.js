@@ -90,33 +90,41 @@ exports.handler = function(event, context) {
         console.log('rawKeys');
         console.log(rawKeys);
 
-        var mp4Keys = allKeys.map(function(key) {
-          if (endsWith(key, '\\.mp4')) {
-            return key;
+        var stripToBase = function(string, suffix) {
+          if (!suffix) {
+            suffix = '';
           }
+          return path.basename(string, suffix + path.extname(string));
+        };
+
+        var keysToBasenames = function(keys, options) {
+          return keys.map(function(key) {
+            if (endsWith(key, options.endsWith))
+              return key;
+          })
+          .filter(function(v) { return v; })
+          .map(function(key) {
+            return stripToBase(key, options.suffix);
+          });
+        };
+
+        var mp4Keys = keysToBasenames(allKeys, {
+          endsWith: '\\.mp4'
         });
-        mp4Keys = mp4Keys.filter(function(v) { return v; });
-        mp4Keys = mp4Keys.map(function(key) { return path.basename(key, path.extname(key)); });
         console.log('mp4Keys');
         console.log(mp4Keys);
 
-        var keys180 = allKeys.map(function(key) {
-          if (endsWith(key, '_180\\.(gif|jpg)')) {
-            return key;
-          }
+        var keys180 = keysToBasenames(allKeys, {
+          endsWith: '_180\\.(gif|jpg)',
+          suffix: '_180'
         });
-        keys180 = keys180.filter(function(v) { return v; });
-        keys180 = keys180.map(function(key) { return path.basename(key, '_180' + path.extname(key)); });
         console.log('keys180');
         console.log(keys180);
 
-        var keys400 = allKeys.map(function(key) {
-          if (endsWith(key, '_400\\.(gif|jpg)')) {
-            return key;
-          }
+        var keys400 = keysToBasenames(allKeys, {
+          endsWith: '_400\\.(gif|jpg)',
+          suffix: '_400'
         });
-        keys400 = keys400.filter(function(v) { return v; });
-        keys400 = keys400.map(function(key) { return path.basename(key, '_400' + path.extname(key)); });
         console.log('keys400');
         console.log(keys400);
 
