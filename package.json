@@ -17,6 +17,7 @@
   "devDependencies": {
     "chai": "^2.3.0",
     "gulp": "^3.9.0",
+    "gulp-mocha": "^2.1.0",
     "lambduh-gulp": "^0.1.1"
   }
 }

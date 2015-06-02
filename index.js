@@ -53,11 +53,14 @@ var invokeGifToMp4 = function(event) {
   return defer.promise;
 };
 
-function endsWith(str, endString) {
+var endsWith = function(str, endString) {
   return new RegExp(endString + '$').test(str);
-}
+};
 
 exports.handler = function(event, context) {
+  var rawKeys = [];
+  var allKeys = [];
+
   console.log('Validating S3 event.');
   console.log(event);
   validate(event, {
@@ -65,32 +68,80 @@ exports.handler = function(event, context) {
     "prefix": true
   })
 
-  //list filenames at prefix
   .then(function(event) {
     var def = Q.defer();
-    S3.listObject({
+    S3.listObjects({
       Bucket: event.srcBucket,
       Prefix: event.prefix
     }, function(err, data) {
       if (err) def.reject(err);
       else {
-        var keys = data.Contents.map(function(object) {
-          if (endsWith(object.Key, '\\.(gif|jpg|GIF|JPG)') && !endsWith(object.Key, '_\\d+\\.(gif|jpg|GIF|JPG)'))
+        allKeys = data.Contents.map(function(object) {
             return object.Key;
         });
-        keys = keys.filter(function(v) { return v; });
-        console.log('keys');
-        console.log(keys);
+        console.log('allkeys');
+        console.log(allKeys);
+
+        rawKeys = allKeys.map(function(key) {
+          if (endsWith(key, '\\.(gif|jpg|GIF|JPG)') && !endsWith(key, '_\\d+\\.(gif|jpg|GIF|JPG)'))
+            return key;
+        });
+        rawKeys = rawKeys.filter(function(v) { return v; });
+        console.log('rawKeys');
+        console.log(rawKeys);
+
+        var mp4Keys = allKeys.map(function(key) {
+          if (endsWith(key, '\\.mp4')) {
+            return key;
+          }
+        });
+        mp4Keys = mp4Keys.filter(function(v) { return v; });
+        console.log('mp4Keys');
+        console.log(mp4Keys);
+
+        var keys180 = allKeys.map(function(key) {
+          if (endsWith(key, '_180\\.(gif|jpg)')) {
+            return key;
+          }
+        });
+        keys180 = keys180.filter(function(v) { return v; });
+        console.log('keys180');
+        console.log(keys180);
+
+        var keys400 = allKeys.map(function(key) {
+          if (endsWith(key, '_400\\.(gif|jpg)')) {
+            return key;
+          }
+        });
+        keys400 = keys400.filter(function(v) { return v; });
+        console.log('keys400');
+        console.log(keys400);
+
+        def.resolve();
       }
     });
     return def.promise;
   })
 
-  //filter files to only raw .gifs or raw .jpgs
-  //filter files to only .gifs to convert to .mp4s
-  //filter files to only .gifs/.jpgs to scale
-  //invoke GifToMp4 for all gifsToConvert
-  //invoke ScaleAsset for all filesToScale
+  .then(function(event) {
+    //filter array to gifsToConvert
+
+    var allBasenames = [];
+    allBasenames = allKeys.map(function(key) {
+      return path.basename(key, '.mp4');
+    });
+
+    var gifsToConvert = rawKeys.filter(function(key) {
+      return key;
+    });
+    //invoke GifToMp4 for all gifsToConvert
+  })
+
+  .then(function(event) {
+    //filter array to filesToScale
+    //invoke ScaleAsset for all filesToScale
+  })
+
 
   //invoke gif-to-mp4
   .then(function() {
