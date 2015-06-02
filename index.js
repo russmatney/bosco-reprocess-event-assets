@@ -8,25 +8,26 @@ var S3 = new AWS.S3();
 
 var validate = require('lambduh-validate');
 
-var invokeScaleAsset = function(event, res) {
+var invokeScaleAsset = function(options) {
   var defer = Q.defer();
 
-  var destKey = path.dirname(event.srcKey) + '/' + path.basename(event.srcKey, event.extension) + '_' + res + event.extension;
+  var destKey = path.dirname(options.srcKey) + '/' + path.basename(options.srcKey, path.extname(options.srcKey)) + '_' + options.scale + path.extname(options.srcKey);
+  var srcUrl = "https://s3.amazonaws.com/" + options.srcBucket + "/" + options.srcKey;
   console.log(destKey);
   Lambda.invokeAsync({
     FunctionName: "scale-asset",
     InvokeArgs: JSON.stringify({
-      srcUrl: event.srcUrl,
-      destBucket: event.srcBucket,
+      srcUrl: srcUrl,
+      destBucket: options.srcBucket,
       destKey: destKey,
-      newRes: res
+      newRes: options.scale
     })
   }, function(err) {
     if (err) {
       defer.reject(err);
     } else {
-      console.log('scale-asset invoked with res: ' + res);
-      defer.resolve(event);
+      console.log('scale-asset invoked with scale: ' + options.scale);
+      defer.resolve(options);
     }
   });
   return defer.promise;
@@ -91,6 +92,8 @@ exports.handler = function(event, context) {
   var rawKeys = [];
   var allKeys = [];
   var mp4Keys = [];
+  var keys180 = [];
+  var keys400 = [];
 
   console.log('Validating S3 event.');
   console.log(event);
@@ -110,36 +113,26 @@ exports.handler = function(event, context) {
         allKeys = data.Contents.map(function(object) {
             return object.Key;
         });
-        console.log('allkeys');
-        console.log(allKeys);
 
         rawKeys = allKeys.map(function(key) {
           if (endsWith(key, '\\.(gif|jpg|GIF|JPG)') && !endsWith(key, '_\\d+\\.(gif|jpg|GIF|JPG)'))
             return key;
         });
         rawKeys = rawKeys.filter(function(v) { return v; });
-        console.log('rawKeys');
-        console.log(rawKeys);
 
         mp4Keys = keysToBasenames(allKeys, {
           endsWith: '\\.mp4'
         });
-        console.log('mp4Keys');
-        console.log(mp4Keys);
 
-        var keys180 = keysToBasenames(allKeys, {
+        keys180 = keysToBasenames(allKeys, {
           endsWith: '_180\\.(gif|jpg)',
           suffix: '_180'
         });
-        console.log('keys180');
-        console.log(keys180);
 
-        var keys400 = keysToBasenames(allKeys, {
+        keys400 = keysToBasenames(allKeys, {
           endsWith: '_400\\.(gif|jpg)',
           suffix: '_400'
         });
-        console.log('keys400');
-        console.log(keys400);
 
         def.resolve();
       }
@@ -157,8 +150,6 @@ exports.handler = function(event, context) {
         return false;
       }
     });
-    console.log('gifsToConvert');
-    console.log(gifsToConvert);
 
     var promises = [];
     gifsToConvert.forEach(function(key) {
@@ -171,8 +162,8 @@ exports.handler = function(event, context) {
     });
 
     Q.all(promises)
-      .then(function(results) {
-        console.log('promises resolved');
+      .then(function() {
+        console.log('mp4 convert promises resolved');
         def.resolve();
       });
 
@@ -180,16 +171,53 @@ exports.handler = function(event, context) {
   })
 
   .then(function() {
-    //filter array to filesToScale
-    //invoke ScaleAsset for all filesToScale
+    var def = Q.defer();
+    var file180sToConvert = rawKeys.filter(function(key) {
+      if (!contains(keys180, stripToBase(key)) || event.forceRescale) {
+        return key;
+      } else {
+        return false;
+      }
+    });
+    var promises = [];
+    file180sToConvert.forEach(function(key) {
+      promises.push(invokeScaleAsset({
+        srcKey: key,
+        srcBucket: event.srcBucket,
+        scale: "180"
+      }));
+    });
+    Q.all(promises)
+      .then(function() {
+        console.log('180 scale promises resolved');
+        def.resolve();
+      });
+    return def.promise;
   })
 
-
   .then(function() {
-    //return invokeScaleAsset(event, "180");
-  })
-  .then(function() {
-    //return invokeScaleAsset(event, "400");
+    var def = Q.defer();
+    var file400sToConvert = rawKeys.filter(function(key) {
+      if (!contains(keys400, stripToBase(key)) || event.forceRescale) {
+        return key;
+      } else {
+        return false;
+      }
+    });
+    var promises = [];
+    file400sToConvert.forEach(function(key) {
+      promises.push(invokeScaleAsset({
+        srcKey: key,
+        srcBucket: event.srcBucket,
+        scale: "400"
+      }));
+    });
+    Q.all(promises)
+      .then(function() {
+        console.log('400 scale promises resolved');
+        def.resolve();
+      });
+    return def.promise;
   })
 
   .then(function() {
