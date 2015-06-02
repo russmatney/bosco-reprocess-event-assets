@@ -4,8 +4,19 @@
   "description": "Process raw event assets - scales and converts to .mp4, optionally overwrites existing scaled images",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "`which gulp` mocha"
   },
   "author": "Russell Matney <russell.matney@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1.32",
+    "lambduh-validate": "^1.1.0",
+    "path": "^0.11.14",
+    "q": "^1.4.1"
+  },
+  "devDependencies": {
+    "chai": "^2.3.0",
+    "gulp": "^3.9.0",
+    "lambduh-gulp": "^0.1.1"
+  }
 }
