@@ -1,0 +1,11 @@
+{
+  "name": "reprocess-event-assets",
+  "version": "1.0.0",
+  "description": "Process raw event assets - scales and converts to .mp4, optionally overwrites existing scaled images",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Russell Matney <russell.matney@gmail.com>",
+  "license": "MIT"
+}
