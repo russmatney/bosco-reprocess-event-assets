@@ -1,7 +1,9 @@
 var path = require('path');
 var Q = require('q');
 var AWS = require('aws-sdk');
-var Lambda = new AWS.Lambda();
+var Lambda = new AWS.Lambda({
+  region: 'us-east-1'
+});
 var S3 = new AWS.S3();
 
 var validate = require('lambduh-validate');
@@ -33,7 +35,7 @@ var invokeScaleAsset = function(event, res) {
 var invokeGifToMp4 = function(options) {
   var defer = Q.defer();
 
-  var destKey = path.dirname(options.srcKey) + "/" + path.basename(options.srcKey, path.extname(options)) + '.mp4';
+  var destKey = path.dirname(options.srcKey) + "/" + path.basename(options.srcKey, path.extname(options.srcKey)) + '.mp4';
   var srcUrl = "https://s3.amazonaws.com/" + options.srcBucket + "/" + options.srcKey;
   Lambda.invokeAsync({
     FunctionName: "gif-to-mp4",
@@ -157,17 +159,22 @@ exports.handler = function(event, context) {
     });
     console.log('gifsToConvert');
     console.log(gifsToConvert);
-    //invoke GifToMp4 for all gifsToConvert
+
+    var promises = [];
     gifsToConvert.forEach(function(key) {
       if (path.extname(key) == '.gif' || path.extname(key) == '.GIF') {
-        def.resolve(invokeGifToMp4({
+        promises.push(invokeGifToMp4({
           srcKey: key,
           srcBucket: event.srcBucket
         }));
-      } else {
-        def.resolve(event);
       }
     });
+
+    Q.all(promises)
+      .then(function(results) {
+        console.log('promises resolved');
+        def.resolve();
+      });
 
     return def.promise;
   })
