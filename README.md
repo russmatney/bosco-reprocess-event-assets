@@ -17,12 +17,12 @@ This AWS Lambda function:
 The intended invokation of this function is the AWS console,
 which allows you to set the `srcBucket` and `prefix` before invoking.
 
-```json
+```js
 //example input
 var event = {
-  srcBucket: "russbosco",
-  prefix: "events/partytownusa",
-  forceConvert: false, //optional
-  forceScale: false //optional
+  "srcBucket": "russbosco",
+  "prefix": "events/partytownusa",
+  "forceConvert": false, //optional
+  "forceScale": false //optional
 };
 ```
