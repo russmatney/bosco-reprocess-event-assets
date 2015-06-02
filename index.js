@@ -2,6 +2,7 @@ var path = require('path');
 var Q = require('q');
 var AWS = require('aws-sdk');
 var Lambda = new AWS.Lambda();
+var S3 = new AWS.S3();
 
 var validate = require('lambduh-validate');
 
@@ -52,6 +53,10 @@ var invokeGifToMp4 = function(event) {
   return defer.promise;
 };
 
+function endsWith(str, endString) {
+  return new RegExp(endString + '$').test(str);
+}
+
 exports.handler = function(event, context) {
   console.log('Validating S3 event.');
   console.log(event);
@@ -61,6 +66,26 @@ exports.handler = function(event, context) {
   })
 
   //list filenames at prefix
+  .then(function(event) {
+    var def = Q.defer();
+    S3.listObject({
+      Bucket: event.srcBucket,
+      Prefix: event.prefix
+    }, function(err, data) {
+      if (err) def.reject(err);
+      else {
+        var keys = data.Contents.map(function(object) {
+          if (endsWith(object.Key, '\\.(gif|jpg|GIF|JPG)') && !endsWith(object.Key, '_\\d+\\.(gif|jpg|GIF|JPG)'))
+            return object.Key;
+        });
+        keys = keys.filter(function(v) { return v; });
+        console.log('keys');
+        console.log(keys);
+      }
+    });
+    return def.promise;
+  })
+
   //filter files to only raw .gifs or raw .jpgs
   //filter files to only .gifs to convert to .mp4s
   //filter files to only .gifs/.jpgs to scale
