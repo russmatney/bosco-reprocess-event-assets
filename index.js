@@ -96,6 +96,7 @@ exports.handler = function(event, context) {
           }
         });
         mp4Keys = mp4Keys.filter(function(v) { return v; });
+        mp4Keys = mp4Keys.map(function(key) { return path.basename(key, path.extname(key)); });
         console.log('mp4Keys');
         console.log(mp4Keys);
 
@@ -105,6 +106,7 @@ exports.handler = function(event, context) {
           }
         });
         keys180 = keys180.filter(function(v) { return v; });
+        keys180 = keys180.map(function(key) { return path.basename(key, '_180' + path.extname(key)); });
         console.log('keys180');
         console.log(keys180);
 
@@ -114,6 +116,7 @@ exports.handler = function(event, context) {
           }
         });
         keys400 = keys400.filter(function(v) { return v; });
+        keys400 = keys400.map(function(key) { return path.basename(key, '_400' + path.extname(key)); });
         console.log('keys400');
         console.log(keys400);
 
