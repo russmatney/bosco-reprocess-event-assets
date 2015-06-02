@@ -30,15 +30,16 @@ var invokeScaleAsset = function(event, res) {
   return defer.promise;
 };
 
-var invokeGifToMp4 = function(event) {
+var invokeGifToMp4 = function(options) {
   var defer = Q.defer();
 
-  var destKey = path.dirname(event.srcKey) + "/" + path.basename(event.srcKey, event.extension) + '.mp4';
+  var destKey = path.dirname(options.srcKey) + "/" + path.basename(options.srcKey, path.extname(options)) + '.mp4';
+  var srcUrl = "https://s3.amazonaws.com/" + options.srcBucket + "/" + options.srcKey;
   Lambda.invokeAsync({
     FunctionName: "gif-to-mp4",
     InvokeArgs: JSON.stringify({
-      srcUrl: event.srcUrl,
-      destBucket: event.srcBucket,
+      srcUrl: srcUrl,
+      destBucket: options.srcBucket,
       destKey: destKey
     })
   }, function(err) {
@@ -46,7 +47,7 @@ var invokeGifToMp4 = function(event) {
       defer.reject(err);
     } else {
       console.log('gif-to-mp4 invoked');
-      defer.resolve(event);
+      defer.resolve();
     }
   });
 
@@ -57,9 +58,37 @@ var endsWith = function(str, endString) {
   return new RegExp(endString + '$').test(str);
 };
 
+var stripToBase = function(string, suffix) {
+  if (!suffix) {
+    suffix = '';
+  }
+  return path.basename(string, suffix + path.extname(string));
+};
+
+var keysToBasenames = function(keys, options) {
+  return keys.map(function(key) {
+    if (endsWith(key, options.endsWith))
+      return key;
+  })
+  .filter(function(v) { return v; })
+  .map(function(key) {
+    return stripToBase(key, options.suffix);
+  });
+};
+
+var contains = function(array, item) {
+  if (array.indexOf(item) == -1) {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+
 exports.handler = function(event, context) {
   var rawKeys = [];
   var allKeys = [];
+  var mp4Keys = [];
 
   console.log('Validating S3 event.');
   console.log(event);
@@ -68,7 +97,7 @@ exports.handler = function(event, context) {
     "prefix": true
   })
 
-  .then(function(event) {
+  .then(function() {
     var def = Q.defer();
     S3.listObjects({
       Bucket: event.srcBucket,
@@ -90,25 +119,7 @@ exports.handler = function(event, context) {
         console.log('rawKeys');
         console.log(rawKeys);
 
-        var stripToBase = function(string, suffix) {
-          if (!suffix) {
-            suffix = '';
-          }
-          return path.basename(string, suffix + path.extname(string));
-        };
-
-        var keysToBasenames = function(keys, options) {
-          return keys.map(function(key) {
-            if (endsWith(key, options.endsWith))
-              return key;
-          })
-          .filter(function(v) { return v; })
-          .map(function(key) {
-            return stripToBase(key, options.suffix);
-          });
-        };
-
-        var mp4Keys = keysToBasenames(allKeys, {
+        mp4Keys = keysToBasenames(allKeys, {
           endsWith: '\\.mp4'
         });
         console.log('mp4Keys');
@@ -134,34 +145,38 @@ exports.handler = function(event, context) {
     return def.promise;
   })
 
-  .then(function(event) {
-    //filter array to gifsToConvert
-
-    var allBasenames = [];
-    allBasenames = allKeys.map(function(key) {
-      return path.basename(key, '.mp4');
-    });
+  .then(function() {
+    var def = Q.defer();
 
     var gifsToConvert = rawKeys.filter(function(key) {
-      return key;
+      if (!contains(mp4Keys, stripToBase(key)) || event.forceConvert) {
+        return key;
+      } else {
+        return false;
+      }
     });
+    console.log('gifsToConvert');
+    console.log(gifsToConvert);
     //invoke GifToMp4 for all gifsToConvert
+    gifsToConvert.forEach(function(key) {
+      if (path.extname(key) == '.gif' || path.extname(key) == '.GIF') {
+        def.resolve(invokeGifToMp4({
+          srcKey: key,
+          srcBucket: event.srcBucket
+        }));
+      } else {
+        def.resolve(event);
+      }
+    });
+
+    return def.promise;
   })
 
-  .then(function(event) {
+  .then(function() {
     //filter array to filesToScale
     //invoke ScaleAsset for all filesToScale
   })
 
-
-  //invoke gif-to-mp4
-  .then(function() {
-    if (event.extension == '.gif' || event.extension == '.GIF') {
-      return invokeGifToMp4(event);
-    } else {
-      return event;
-    }
-  })
 
   .then(function() {
     //return invokeScaleAsset(event, "180");
