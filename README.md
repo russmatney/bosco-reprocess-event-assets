@@ -7,10 +7,10 @@ Invokes Lambda functions: `gif-to-mp4` and `scale-asset` for relevant .gifs/.jpg
 This AWS Lambda function:
 
 - Requires `srcBucket` and `prefix` as params
-- Filters files to be scaled or converted to .mp4s by suffix and extension
-- If a scaled or converted file already exists, it will not be re-scaled or re-converted unless the `forceRescale` or `forceReconvert` param is passed as true
-- Invokes `gif-to-mp4` for .gif files - builds destination keys
-- Invokes `scale-asset` for .gif or .jpg files - builds destination keys, sets the res at 180 and 400.
+- Builds a list of the 'raw' (unprocessed) gifs or jpgs in the bucket
+- Checks for a sibling .mp4, _180.gif, _400.gif file
+- Invokes `gif-to-mp4` for .gif files if no .mp4 exists OR if `forceReconvert` is set to true
+- Invokes `scale-asset` for .gif or .jpg files if no _180/_400 exists OR if `forceRescale` is set to true
 
 ##Overview
 
@@ -22,7 +22,7 @@ which allows you to set the `srcBucket` and `prefix` before invoking.
 var event = {
   "srcBucket": "russbosco",
   "prefix": "events/partytownusa",
-  "forceConvert": false, //optional
-  "forceScale": false //optional
+  "forceReconvert": false, //optional
+  "forceRescale": false //optional
 };
 ```

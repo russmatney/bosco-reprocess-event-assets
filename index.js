@@ -13,7 +13,6 @@ var invokeScaleAsset = function(options) {
 
   var destKey = path.dirname(options.srcKey) + '/' + path.basename(options.srcKey, path.extname(options.srcKey)) + '_' + options.scale + path.extname(options.srcKey);
   var srcUrl = "https://s3.amazonaws.com/" + options.srcBucket + "/" + options.srcKey;
-  console.log(destKey);
   Lambda.invokeAsync({
     FunctionName: "scale-asset",
     InvokeArgs: JSON.stringify({
